@@ -1,0 +1,51 @@
+pipeline {
+    agent any
+    tools {
+        maven "maven"
+        jdk "jdk17"
+    }
+    environment {
+                SCANNER_HOME = tool 'sonar-scanner'
+    }
+
+    stages {
+        stage('Git Checkout') {
+            steps {
+                git branch: 'main', changelog: false, poll: false, url: 'https://github.com/jaiswaladi246/Ekart.git'
+            }
+        }
+         stage('Compile') {
+            steps {
+               sh "mvn clean compile"
+            }
+        }
+               stage('SonarQube Analysis') {
+            steps {
+                sh '''
+                    $SCANNER_HOME/bin/sonar-scanner \
+                    -Dsonar.projectKey=shopping-cart \
+                    -Dsonar.projectName=shopping-cart \
+                    -Dsonar.host.url=http://13.61.152.212:9000 \
+                    -Dsonar.login=squ_8d15c73992bccc672f6d79931976d51d8dc293d2 \
+                    -Dsonar.java.binaries=target/classes
+                '''
+            }
+        }
+         stage('Build Application') {
+            steps {
+               sh "mvn clean install -DskipTests=true"
+            }
+        }
+         stage('docker login') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+            sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+            sh "docker build -t shopping:latest -f docker/Dockerfile ."
+            sh "docker tag shopping:latest ${DOCKER_USER}/shopping:latest"
+            sh "docker push ${DOCKER_USER}/shopping:latest"
+        }
+    }
+}
+
+    }
+}

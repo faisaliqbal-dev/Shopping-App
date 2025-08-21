@@ -1,3 +1,4 @@
+#CI 
 pipeline {
     agent any
     tools {
@@ -47,5 +48,15 @@ pipeline {
     }
 }
 
+    }
+}
+
+#CD
+stage('Docker Deploy') {
+    steps {
+        withCredentials([usernamePassword(credentialsId: 'dockerhub', passwordVariable: 'DOCKER_PASS', usernameVariable: 'DOCKER_USER')]) {
+            sh "echo ${DOCKER_PASS} | docker login -u ${DOCKER_USER} --password-stdin"
+            sh "docker run -d --name shopping-cart -p 8070:8070 mohammedfaisaliqbal/shopping:latest"
+        }
     }
 }
